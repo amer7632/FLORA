@@ -314,12 +314,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %collects necessary end result data
-save('FLORA_Paleorun', 'final_biomass', 'biome', 'CO2_level', 'temp_end', 'runoff_end', 'final_biomass_bor', 'final_biomass_tem', 'final_biomass_tro', 'CO2_level', 'O2' )
+save('FLORA_Paleorun', 'final_biomass', 'biome', 'temp_end', 'runoff_end', 'final_biomass_bor', 'final_biomass_tem', 'final_biomass_tro', 'CO2_level', 'O2', 'time', 'x_lon', 'y_lat' )
 
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%       Figures       %%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
