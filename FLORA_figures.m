@@ -9,7 +9,7 @@
 %%%%%%%%                     FLORA_validation                    %%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
+clear
 load FLORA_validation.mat
 load FLORA_present_day_data.mat
 
@@ -87,23 +87,26 @@ legend( 'Model data', 'Actual data' )
 hold off
 
 figure
-a1( : , 1 ) =  log10(c_biomass( : ) ) ; 
-a1( : , 2 ) =  log10(final_biomass( : ))  ;
+a1( : , 1 ) =  log10(c_biomass( : )); 
+a1( : , 2 ) =  log10(final_biomass( : )) ;
 a2 = rmmissing( a1 ) ;
 a2( any( isinf( a2 ), 2 ), : ) = [] ; 
 coef1 = polyfit( a2( : , 1 ), a2( : , 2 ), 1)
 y1 = polyval( coef1, a2( : , 1 ) ) ;
-plot( a2( : , 2 ), a2( : , 1 ), '.' ) 
+scatter1 = scatter(a2(:,2), a2(:,1),'MarkerEdgeColor', [0.5 0.5 0.5], 'MarkerEdgeAlpha', 0.05) ;
 hold on
-plot( a2( : , 1 ), y1 )
+plot( a2( : , 1 ), y1, 'LineWidth', 1.5)
+
 %R-squared for log scale biomass
 mdl= fitlm( a2( : , 1 ), a2( : , 2 ) ) ;
 %R-squared for raw biomass
 mdl2 = fitlm( c_biomass( : ), final_biomass( : ) ) ; 
 hold off
-xlim([2 4.5])
-ylim([2 4.5])
-
+xlim([1.5 4.5])
+ylim([1.5 4.5])
+box on
+ylabel('log_{10}(Measured biomass)')
+xlabel('log_{10}(Modelled biomass)')
 
 clear
 
@@ -237,89 +240,118 @@ for i = 1:22
     averages(i,1) = nansum(tmp_avg) ;
     averages(i,2) = nansum(tmp_m_stdev) ;
     averages(i,3) = nansum(tmp_p_stdev) ;
-    averages(i,4) = sum(nansum(runoff_data(:,:,CO2_level(i),i) .* land .* area)) ; 
-    averages(i,5) = sum(nansum(runoff_data(:,:,CO2_m_stdev(i),i) .* land .* area )) ;
-    averages(i,6) = sum(nansum(runoff_data(:,:,CO2_p_stdev(i),i) .* land .* area)) ; 
+    averages(i,4) = sum(nansum(runoff_data(:,:,CO2_level(i),i) .* land )) ; 
+    averages(i,5) = sum(nansum(runoff_data(:,:,CO2_m_stdev(i),i) .* land )) ;
+    averages(i,6) = sum(nansum(runoff_data(:,:,CO2_p_stdev(i),i) .* land )) ; 
     averages(i,7) = nansum(nansum(area .* land)) ;
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%Multiple regression analysis
+%Linear regression analysis
 
-%Temp vs biomass
-for i = 1 : time
+%Calculating r2 values
+
+%Temp vs Biomass
+
+
+for i = 1:22
+    subplot(6,4,i)
     a1 = temp_data(:,:,CO2_level(i),i).* land_data(:,:,i) ; 
     a2 = final_biomass(:,:,i) .* area ; 
-    a3 = runoff_data(:,:,CO2_level(i),i) .* land_data(:,:,i);
-    a4 = land_data(:,:,i) .* area ; 
     a1= a1(:) ; 
     a2 = a2(:) ; 
-    a3 = a3(:) ; 
-    a4 = a4(:) ; 
+    for b = 1:length(a1)
+        if isnan(a2(b)) == 1
+        a1(b) = -1e5 ; 
+        a2(b) = -1e5 ;
+        else
+        end
+    end
     a1(a1 == -1e5 ) = [] ; 
     a2(a2 == -1e5 ) = [] ;
-    a3(a3 == -1e5 ) = [] ; 
-    a4(a4 == -1e5) = [] ; 
-    
-    test = [ ones(size(a1)) a1 a3 a4 a1.*a3 a1.*a4 ] ; 
-    [~,~,~,~,stats] = regress(a2, test) ;
-    reg(i,:) = stats;
+
+    coef1 = polyfit(a1,a2,1) ;
+    y1 = polyval(coef1,a1) ;
+    plot(a1, a2, '.') 
+    xlim([ -10 35 ])
+%     hold on
+%     plot(a1, y1)
+    mdl= fitlm(a1,a2) ;
+    r_sq(i) = mdl.Rsquared ;
 end
+temp_r = table2array(struct2table(r_sq)) ; 
+
+%Runoff vs Biomass
+
+figure
+for i = 1:22
+    subplot(6,4,i)
+    a1 = runoff_data(:,:,CO2_level(i),i).* land_data(:,:,i) ;
+    a2 = final_biomass(:,:,i) .* area ;
+    a1= a1(:) ; 
+    a2 = a2(:) ; 
+    for b = 1:length(a1)
+        if isnan(a2(b)) == 1
+        a1(b) = -1e5 ; 
+        a2(b) = -1e5 ;
+        else
+        end
+    end
+    a1(a1 == -1e5 ) = [] ; 
+    a2(a2 == -1e5 ) = [] ;
+    coef1 = polyfit(a1,a2,1) ; 
+    y1 = polyval(coef1,a1) ;
+    plot(a1, a2, '.') 
+    xlim([ 0 3000 ])
+%     hold on
+%     plot(a1, y1)
+    mdl= fitlm(a1,a2) ;
+    r_sq(i) = mdl.Rsquared ;
+end
+runoff_r = table2array(struct2table(r_sq)) ; 
+
+%Regression with 22 timepoints
+for i = 1 : 22
+    sum_biomass(i) = sum(nansum(final_biomass(:,:,i) .* area))/1000 ; %kg C
+end
+coef1 = polyfit(averages(:,1),sum_biomass(:), 1) ; 
+y1 = polyval(coef1, averages(:,1)) ; 
+
+figure
+plot(averages(:,1), sum_biomass, '.')
+xlabel('Temp (^{o}C)')
+ylabel('Biomass (kg C)')
+hold on
+plot(averages(:,1), y1)
+hold off
+mdl = fitlm(averages(:,1), sum_biomass) 
+
+figure
+plot(averages(:,4), sum_biomass, '.')
+coef1 = polyfit(averages(:,4), sum_biomass(:),1) ; 
+y1 = polyval(coef1, averages(:,4)) ; 
+hold on
+plot(averages(:,4), y1)
+xlabel('Runoff (mm)')
+ylabel('Biomass (kg C)')
+mdl = fitlm(averages(:,4), sum_biomass)
+
+%NPP over time
+for i = 1 : 22
+    sum_NPP(i) = sum(nansum(final_NPP(:,:,i) .* area)) ;
+end
+sum_NPP = sum_NPP/sum_NPP(end) ; 
+figure
+plot(time_data, sum_NPP)
+xlabel('Time (Ma)')
+ylabel('Relative NPP')
+ylim([0 3])
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%      Biomes         %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%Biomes with area
-%Finding the arid/ice areas
-for a = 1 : time
-    tmp_avg = temp_data( : , : , [ CO2_level(a) ] , a ) .* land_data(:,:,a) ;
-    
-    for i = 1 : x_lon
-        for j = 1 : y_lat
-           
-            if tmp_avg( i, j ) < -10 
-                bice( i, j, a ) = area (i,j); %ice 
-            else
-                bice(i,j,a) = NaN ;
-            end
-            
-            if runoff_end( i, j, a ) == 0
-                barid( i, j, a ) = area (i,j) ; %arid
-            else
-            end 
-            
-            if biome(i,j,a) == 1
-                btem(i,j,a) = area(i,j) ; %temperate
-            elseif biome(i,j,a) == 2
-                bbor(i,j,a) = area(i,j) ; %boreal
-            elseif biome(i,j,a) == 3
-                btro(i,j,a) = area(i,j) ; %tropical
-            else
-            end
-            
-        end
-    end
-    
-    ice_sum(a) = sum(nansum(bice(:,:,a))) ; 
-    arid_sum(a) = sum(nansum(barid(:,:,a))) ; 
-    tem_sum(a) = sum(nansum(btem(:,:,a))) ; 
-    tro_sum(a) = sum(nansum(btro(:,:,a))) ; 
-    bor_sum(a) = sum(nansum(bbor(:,:,a))) ; 
-end
-
-figure
-plot(time_data, ice_sum)
-hold on
-plot(time_data, arid_sum)
-plot(time_data, tem_sum)
-plot(time_data, bor_sum)
-plot(time_data, tro_sum)
-hold off
-xlabel('Time (Ma)')
-ylabel('Area (m^{2})')
-legend('Ice', 'Arid', 'Temperate', 'Boreal', 'Tropical')
 
 area_biomass = final_biomass .* area ; 
 for a = 1:time
@@ -342,13 +374,5 @@ for a = 1:time
     
 end
 
-figure
-plot(time_data, tem_sum)
-hold on
-plot(time_data, bor_sum)
-plot(time_data, tro_sum)
-legend('Temperate','Boreal','Tropical')
-xlabel('Time (Ma)')
-ylabel('Biomass (g/C)')
 
 

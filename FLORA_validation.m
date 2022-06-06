@@ -299,7 +299,7 @@ biome = biome .* land_cru ;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-%comparing CDIAC carbon values to model (kg/ha)
+%comparing CDIAC carbon values to model 
 c_biomass = CDIAC_biomass / 10 ; 
 % kg/ha -> gC/m^2
 compare_carbon = final_biomass - c_biomass ; 

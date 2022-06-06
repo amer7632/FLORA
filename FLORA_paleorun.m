@@ -6,6 +6,7 @@
 
 %%% SETUP %%%
 
+clear
 load paleo2021_data1.mat
 %contains
 %CO2_data = CO2 (ppm) value
@@ -146,8 +147,11 @@ for a = 1:22
         c1_tro( : , : ) = alpha * ftemp_tro .* ( ( pi - tstar( : , : ) ) ./ ( pi + 2 * tstar( : , : ) ) ) ;
 
         sigma( : , : ) = ( 1 - ( ( c2( : , : ) - s ) ./ ( c2( : , : ) - theta * s ) ) ) .^ 0.5 ;
-        ins( : , : ) = 150 + 250 .* normpdf( lat', 0, 40 ) ./ normpdf( 0, 0, 40 ) .* ones( x_lon, y_lat ) ;
-
+        ins_present( : , : ) = 150 + 250 .* normpdf( lat', 0, 40 ) ./ normpdf( 0, 0, 40 ) .* ones( x_lon, y_lat ) ;
+        
+        %Change in insolation overtime
+        ins( : , : ) = ins_present - (ins_present * 4.6/100 * (abs(time_data(a))/570)) ; 
+        
         % Maintenance respiration % 
 
         %Arrhenius equation; temperature function for respiration
@@ -280,6 +284,10 @@ for a = 1:22
         final_biomass_bor( :, :, a ) = biomass_bor( :, :, end ) ; 
         final_biomass_tro( :, :, a ) = biomass_tro( :, :, end ) ;
         
+        final_NPP_tem( :, :, a ) = NPP_tem( :, :, end ); 
+        final_NPP_bor( :, :, a ) = NPP_bor( :, :, end ); 
+        final_NPP_tro( :, :, a ) = NPP_tro( :, :, end );
+        
         %Saving temp info 
         temp_end( :, :, a ) = tmp_avg ; 
         runoff_end( :, :, a ) = runoff_re ; 
@@ -308,13 +316,21 @@ for a = 1 : 22
     end
 end
 
+for a = 1 : 22
+    for i = 1 : x_lon
+        for j = 1 : y_lat
+           final_NPP( i, j, a ) =  max( final_NPP_tem( i, j, a ),max( final_NPP_bor( i, j, a ), final_NPP_tro( i, j, a ) ) ) ;
+        end
+    end
+end
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%    Save results     %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %collects necessary end result data
-save('FLORA_Paleorun', 'final_biomass', 'biome', 'temp_end', 'runoff_end', 'final_biomass_bor', 'final_biomass_tem', 'final_biomass_tro', 'CO2_level', 'O2', 'time', 'x_lon', 'y_lat' )
+save('FLORA_Paleorun', 'CO2_m_stdev', 'CO2_p_stdev', 'final_biomass', 'biome', 'temp_end', 'runoff_end', 'final_biomass_bor', 'final_biomass_tem', 'final_biomass_tro', 'CO2_level', 'O2', 'time', 'x_lon', 'y_lat', 'final_NPP' )
 
 
 
