@@ -6,7 +6,8 @@
 
 %%% SETUP %%%
 
-load FLORA_present_day_data.mat
+clear
+load data/FLORA_present_day_data.mat
 %contains
 %CDIAC_biomass: IPCC biomss with reduced resolution to match proxy data
 %land_cru, lat_cru, lon_cru: CRU data

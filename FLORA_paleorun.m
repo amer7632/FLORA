@@ -7,7 +7,7 @@
 %%% SETUP %%%
 
 clear
-load paleo2021_data1.mat
+load data/paleo2021_data1.mat
 %contains
 %CO2_data = CO2 (ppm) value
             %(1) 10, (2) 50, (3) 100, (4) 160, (5) 180, (6) 200, (7) 240,

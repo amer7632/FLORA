@@ -11,7 +11,7 @@
 
 clear
 load FLORA_validation.mat
-load FLORA_present_day_data.mat
+load data/FLORA_present_day_data.mat
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% COLOURS %%%
@@ -117,8 +117,8 @@ clear
 
 
 load FLORA_Paleorun.mat
-load paleo2021_data1.mat
-load area.mat
+load data/paleo2021_data1.mat
+load data/area.mat
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Colours
