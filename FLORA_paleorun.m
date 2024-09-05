@@ -90,6 +90,9 @@ life_leaf_tem = 0.75 ;
 life_leaf_bor = 0.75 ;
 life_leaf_tro = 1 ; 
 
+%Insolation 
+ins_present = 150 + 250 .* normpdf( lat', 0, 40 ) ./ normpdf( 0, 0, 40 ) .* ones( x_lon, y_lat ) ;
+
 for a = 1:22
 
         % Initial time and CO2 setup %
@@ -118,14 +121,7 @@ for a = 1:22
         runoff_re = runoff_data( : , : , [ CO2 ] , [ time ] ) .* land( : , : ) ;
         
         % Ice = no land %
-        for i = 1 : x_lon
-            for j = 1 : y_lat   
-                if tmp_avg( i , j )< -10
-                    tmp_avg( i , j ) = NaN ; 
-                else
-                end
-            end
-        end
+        tmp_avg(tmp_avg < -10) = NaN ; 
 
 
         %Ambient partial pressure
@@ -147,7 +143,6 @@ for a = 1:22
         c1_tro( : , : ) = alpha * ftemp_tro .* ( ( pi - tstar( : , : ) ) ./ ( pi + 2 * tstar( : , : ) ) ) ;
 
         sigma( : , : ) = ( 1 - ( ( c2( : , : ) - s ) ./ ( c2( : , : ) - theta * s ) ) ) .^ 0.5 ;
-        ins_present( : , : ) = 150 + 250 .* normpdf( lat', 0, 40 ) ./ normpdf( 0, 0, 40 ) .* ones( x_lon, y_lat ) ;
         
         %Change in insolation overtime
         ins( : , : ) = ins_present - (ins_present * 4.6/100 * (abs(time_data(a))/570)) ; 
@@ -161,18 +156,10 @@ for a = 1:22
 
         %converting actual runoff into a sigmoidal curve; water presence ranked
         %from 0-1
-        for i = 1 : 40
-            for j = 1 : 48
-                if runoff_re( i , j ) == 0 || runoff_re( i , j ) == NaN
-                    test_water( i , j ) = NaN ; 
-                else
-                    test_water( i , j ) = runoff_re( i , j ) ; 
-                end
-            end
-        end
-
-
-        water_stress = sigmf( test_water, [ 0.005 450 ] ) ; 
+        test_water = runoff_re ; 
+        test_water(test_water == 0 | isnan(test_water)) = NaN ; 
+        test_water = circshift( test_water, -6 ) ; 
+        water_stress = 1 - (1 ./ ( 1 + exp(0.005 .* (test_water - 450)))) ;
 
         %%% PHOTOSYNTHESIS %%%
         photosynth_tem( : , : ) = 10 * 365 * ins( : , : ) .* ( c1_tem( : , : ) ./ c2( : , : ) ) .* ( c2( : , : ) - ( 2 * theta - 1 ) * s - 2 .* ( c2( : , : ) - theta * s ) .* sigma( : , : ) ) .* water_stress( : , : ) ; 
@@ -195,90 +182,34 @@ for a = 1:22
         biomass_tro( biomass_tro == 0 ) = NaN ; 
         % gC/m^2/year
 
-       %Boreal plants%
-        for n = 1 : nsteps
-
+       %Biomass Calculation%
+       for n = 1 : nsteps
+    
             %%% Leaf respiration %%%
-            R_leaf_bor ( :, :, n ) = r_bor * ( C_leaf_bor( :, :, n ) / CN_leaf ) .* g_T( :,: ) ;
-            
-            for i = 1 : x_lon
-                for j = 1 : y_lat
-                    if R_leaf_bor ( i, j, n ) > 0
-                         %do nothing
-                    else
-                        R_leaf_bor( i, j, n ) = 0 ;
-                    end
-                end
-            end
-
-            %%% NPP %%
-            NPP_bor ( :, :, n ) = ( 1 - R_growth ) .* ( photosynth_bor( : , : ) - R_leaf_bor( :, :, n ) ) ; 
-            %gC/m2/year
-
-            %%% Carbon in leaf allocation %%%
-            C_leaf_bor( :, :, n+1 ) = ( C_leaf_bor( :, :, n ) .* ( 1 - life_leaf_bor ) ) + ( lr_max .* NPP_bor( :, :, n ) )  ;
-
-            %%% Biomass %%%
-            biomass_bor( :, :, n+1 ) = biomass_bor( :, :, n ) + ( C_leaf_bor( :, :, n ) - 0.1 * biomass_bor( :, : , n ) ) .* time_step ; 
-                    
-        end
-
-        %Temperate plants%
-
-        for n = 1 : nsteps
-
-            %%% Leaf respiration %%%
-            R_leaf_tem( :, :, n ) = r_tem * ( C_leaf_tem( :, :, n ) / CN_leaf ) .* g_T( : , : ) ;
-           
-            for i = 1 : x_lon
-                for j = 1 : y_lat
-                    if R_leaf_tem( i, j, n ) > 0
-                         %do nothing
-                    else
-                        R_leaf_tem( i, j, n ) = 0 ;
-                    end
-                end
-            end
-
-
-            %%% NPP %%
-            NPP_tem ( :, :, n ) = ( 1 - R_growth ) .* ( photosynth_tem( : , : ) - R_leaf_tem( :, :, n ) ) ; 
-            %gC/m2/year
-
-            %%% Carbon in leaf allocation %%%
-            C_leaf_tem( :, :, n+1 ) = ( C_leaf_tem( :, :, n ) .* ( 1 - life_leaf_tem ) ) + ( lr_max .* NPP_tem( :, :, n ) )  ;
-
-            %%% Biomass %%%
-            biomass_tem( :, :, n+1 ) = biomass_tem( :, :, n ) + ( C_leaf_tem( :, :, n ) - 0.1 * biomass_tem( :, : , n ) ) .* time_step ; 
-
-        end
-     
-       %Tropical plants%
-
-        for n = 1 : nsteps
-
-            %%% Leaf respiration %%%
+            R_leaf_bor( :, :, n ) = r_bor * ( C_leaf_bor( :, :, n ) / CN_leaf ) .* g_T( : , : ) ;
+            R_leaf_bor(R_leaf_bor < 0) = 0 ; 
+            R_leaf_tem ( :, :, n ) = r_tem * ( C_leaf_tem( :, :, n ) / CN_leaf ) .* g_T( : , : ) ;
+            R_leaf_tem(R_leaf_tem < 0) = 0 ; 
             R_leaf_tro ( :, :, n ) = r_tro * ( C_leaf_tro( :, :, n ) / CN_leaf ) .* g_T( : , : ) ;
-            for i = 1 : x_lon
-                for j = 1 : y_lat
-                    if R_leaf_tro ( i, j, n ) > 0
-                         %do nothing
-                    else
-                        R_leaf_tro( i, j, n ) = 0 ;
-                    end
-                end
-            end
+            R_leaf_tro(R_leaf_tro < 0) = 0 ; 
+        
             %%% NPP %%
+            NPP_bor ( :, :, n ) = ( 1 - R_growth ) .* ( photosynth_bor( : , : ) - R_leaf_bor( :, :, n ) ) ;
+            NPP_tem ( :, :, n ) = ( 1 - R_growth ) .* ( photosynth_tem( :, : ) - R_leaf_tem( :, :, n ) ) ; 
             NPP_tro ( :, :, n ) = ( 1 - R_growth ) .* ( photosynth_tro( : , : ) - R_leaf_tro( :, :, n ) ) ; 
             %gC/m2/year
-
+        
             %%% Carbon in leaf allocation %%%
+            C_leaf_bor( :, :, n+1 ) = ( C_leaf_bor( :, :, n ) .* ( 1 - life_leaf_bor ) ) + ( lr_max .* NPP_bor( :, :, n ) )  ;
+            C_leaf_tem( :,:, n+1 ) = ( C_leaf_tem( :, :, n ) .* ( 1 - life_leaf_tem ) ) + ( lr_max .* NPP_tem( :, :, n ) )  ;
             C_leaf_tro( :, :, n+1 ) = ( C_leaf_tro( :, :, n ) .* ( 1 - life_leaf_tro ) ) + ( lr_max .* NPP_tro( :, :, n ) )  ;
-
+        
             %%% Biomass %%%
+            biomass_bor( :, :, n+1 ) = biomass_bor( :, :, n ) + ( C_leaf_bor( :, :, n ) - 0.1 * biomass_bor( :, : , n ) ) .* time_step ; 
+            biomass_tem( :, :, n+1 ) = biomass_tem( :, :, n ) + ( C_leaf_tem( :, :, n ) - 0.1 * biomass_tem( :, :, n ) ) .* time_step ; 
             biomass_tro( :, :, n+1 ) = biomass_tro( :, :, n ) + ( C_leaf_tro( :, :, n ) - 0.1 * biomass_tro( :, : , n ) ) .* time_step ; 
 
-        end
+       end
 
         final_biomass_tem( :, :, a ) = biomass_tem( :, :, end ) ; 
         final_biomass_bor( :, :, a ) = biomass_bor( :, :, end ) ; 
@@ -305,24 +236,21 @@ for a = 1 : 22
            final_biomass( i, j, a ) =  max( final_biomass_tem( i, j, a ),max( final_biomass_bor( i, j, a ), final_biomass_tro( i, j, a ) ) ) ;
            if final_biomass( i, j, a ) == final_biomass_tem( i, j, a )
                biome( i, j, a ) = 1 ; 
+               final_NPP(i,j,a) = final_NPP_tem(i,j,a) ;
            elseif final_biomass( i, j, a ) == final_biomass_bor( i, j, a )
                biome( i, j, a ) = 2 ; 
+               final_NPP(i,j,a) = final_NPP_bor(i,j,a) ; 
            elseif final_biomass( i, j, a ) == final_biomass_tro( i, j, a )
                biome( i, j, a ) = 3 ;
+               final_NPP(i,j,a) = final_NPP_tro(i,j,a) ; 
            else
                biome( i, j, a ) = 4 ; 
+               final_NPP(i,j,a) = NaN ; 
            end
         end
     end
 end
 
-for a = 1 : 22
-    for i = 1 : x_lon
-        for j = 1 : y_lat
-           final_NPP( i, j, a ) =  max( final_NPP_tem( i, j, a ),max( final_NPP_bor( i, j, a ), final_NPP_tro( i, j, a ) ) ) ;
-        end
-    end
-end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -330,7 +258,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %collects necessary end result data
-save('FLORA_Paleorun', 'CO2_m_stdev', 'CO2_p_stdev', 'final_biomass', 'biome', 'temp_end', 'runoff_end', 'final_biomass_bor', 'final_biomass_tem', 'final_biomass_tro', 'CO2_level', 'O2', 'time', 'x_lon', 'y_lat', 'final_NPP' )
+% save('FLORA_Paleorun', 'CO2_m_stdev', 'CO2_p_stdev', 'final_biomass', 'biome', 'temp_end', 'runoff_end', 'final_biomass_bor', 'final_biomass_tem', 'final_biomass_tro', 'CO2_level', 'O2', 'time', 'x_lon', 'y_lat', 'final_NPP' )
 
 
 
