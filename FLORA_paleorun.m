@@ -157,8 +157,8 @@ for a = 1:22
         %converting actual runoff into a sigmoidal curve; water presence ranked
         %from 0-1
         test_water = runoff_re ; 
-        test_water(test_water == 0 | isnan(test_water)) = NaN ; 
-        test_water = circshift( test_water, -6 ) ; 
+        %test_water(test_water == 0 | isnan(test_water)) = NaN ; 
+        %test_water = circshift( test_water, -6 ) ; 
         water_stress = 1 - (1 ./ ( 1 + exp(0.005 .* (test_water - 450)))) ;
 
         %%% PHOTOSYNTHESIS %%%
